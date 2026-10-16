@@ -1,0 +1,1 @@
+SELECT id, title, file_path FROM videos WHERE id = 6;

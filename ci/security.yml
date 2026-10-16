@@ -1,0 +1,85 @@
+semgrep-sast:
+  stage: security
+  allow_failure: false
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - gl-sast-report.json
+    reports:
+      sast: gl-sast-report.json
+
+kics-iac-sast:
+  interruptible: true
+  rules:
+    - when: on_success
+  stage: security
+  needs: []
+
+  after_script:
+    - mv gl-sast-report.json gl-iac-report.json
+  artifacts:
+    paths:
+      - gl-iac-report.json
+    reports:
+      sast: gl-iac-report.json
+
+
+secret_detection:
+  interruptible: true
+  rules:
+    - when: on_success
+  stage: security
+  needs: []
+
+
+container_scanning:
+  interruptible: true
+  rules:
+    - when: on_success
+  stage: security
+  needs:
+    - job: docker-build
+      artifacts: false
+  variables:
+    CS_IMAGE: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+
+
+sca-trivy:
+  stage: security
+  image:
+    name: ${TRIVY_IMAGE}
+    entrypoint: [""]
+  interruptible: true
+  needs:
+    - job: gradle-build
+      artifacts: true
+  variables:
+    TRIVY_CACHE_DIR: "${CI_PROJECT_DIR}/.trivy-cache"
+    TRIVY_NO_PROGRESS: "true"
+
+  cache:
+    key: trivy-db
+    paths:
+      - .trivy-cache/
+  script:
+    - |
+      if [ ! -f gradle.lockfile ]; then
+        echo "WARNING: gradle.lockfile yoxdur - dependency-lər yalnız jar-dan oxunacaq."
+        echo "         Dependency locking aktiv et (docs/CICD.md, bölmə 'SCA')."
+      fi
+    - trivy fs --scanners vuln --skip-dirs .trivy-cache,.gradle --format json --output trivy-sca-lock.json .
+    - |
+      if ls build/libs/*.jar >/dev/null 2>&1; then
+        trivy rootfs --scanners vuln --format json --output trivy-sca-jar.json build/libs
+      else
+        echo '{"Results":[]}' > trivy-sca-jar.json
+      fi
+
+    - trivy fs --scanners vuln --severity HIGH,CRITICAL --skip-dirs .trivy-cache,.gradle --format table . || true
+  artifacts:
+    when: always
+    paths:
+      - trivy-sca-lock.json
+      - trivy-sca-jar.json
+    expire_in: 30 days

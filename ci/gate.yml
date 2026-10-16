@@ -1,0 +1,55 @@
+# =============================================================================
+# SECURITY GATE
+# Scan report-larını oxuyur, branch-ə uyğun qaydanı tətbiq edir.
+#   develop (MR hədəfi və ya push): SAST High/Critical -> FAIL
+#   main    (MR hədəfi və ya push): istənilən scan High/Critical + hər secret -> FAIL
+# Skript: scripts/security-gate.sh
+#
+# MR pipeline-ında HƏDƏF branch qaydası tətbiq olunur: yəni feature -> develop MR-ı
+# merge olmamışdan develop qaydalarına görə yoxlanılır.
+# =============================================================================
+security-gate:
+  stage: gate
+  image: ${GATE_IMAGE}
+  interruptible: true
+  needs:
+    - job: semgrep-sast
+      artifacts: true
+      optional: true
+    - job: kics-iac-sast
+      artifacts: true
+      optional: true
+    - job: secret_detection
+      artifacts: true
+      optional: true
+    - job: sca-trivy
+      artifacts: true
+      optional: true
+    - job: container_scanning
+      artifacts: true
+      optional: true
+  before_script:
+    # Öz mirror-ın varsa GATE_IMAGE-ı jq və bash olan image ilə əvəz et
+    - apk add --no-cache bash jq >/dev/null
+  script:
+    - bash scripts/security-gate.sh
+  artifacts:
+    when: always
+    paths:
+      - gate-summary.md
+    expire_in: 30 days
+
+# Gate skriptinin özünü yoxlayır (yalnız skript dəyişəndə)
+gate-selftest:
+  stage: gate
+  image: ${GATE_IMAGE}
+  interruptible: true
+  needs: []
+  before_script:
+    - apk add --no-cache bash jq >/dev/null
+  script:
+    - bash scripts/test-security-gate.sh
+  rules:
+    - changes:
+        - scripts/security-gate.sh
+        - scripts/test-security-gate.sh

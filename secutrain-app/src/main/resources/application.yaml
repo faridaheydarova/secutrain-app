@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: secutrain-app
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/secutrain_db
+    username: postgres
+    password: "0000"
+    driver-class-name: org.postgresql.Driver
+
+  mail:
+      host: 10.21.0.109
+      port: 25
+      properties:
+        mail:
+          smtp:
+            auth: false
+            starttls:
+              enable: false
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+logging:
+  level:
+    root: INFO
+    com.training: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+springdoc:
+  swagger-ui:
+    operations-sorter: method
+    tags-sorter: alpha
+
+file:
+  upload:
+    path: C:/Users/f.heydarova/Documents/myapp/uploads
+  max-size: 524288000
+
+app:
+  ad:
+    domain: corp.lab
+    url: ldaps://WIN-R95PVCVOCUG.corp.lab:636
+    root-dn: dc=corp,dc=lab
+    search-filter: "(&(objectClass=user)(userPrincipalName={0}))"

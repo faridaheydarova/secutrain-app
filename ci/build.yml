@@ -1,0 +1,23 @@
+# =============================================================================
+# BUILD
+# =============================================================================
+gradle-build:
+  extends: .gradle-base
+  stage: build
+  cache:
+    policy: pull-push     # cache-i yalnız bu job yeniləyir
+  script:
+    - ./gradlew assemble --build-cache
+    # Spring Boot "-plain.jar" varsa onu atıb icra olunan jar-ı sabit adla kopyala
+    - JAR="$(ls build/libs/*.jar | grep -v -- '-plain\.jar$' | head -n1)"
+    - test -n "$JAR" && cp "$JAR" build/app.jar && echo "Artifact -> $JAR"
+  after_script:
+    # Gradle cache-i təmiz saxla (lock faylları cache-ə düşməsin)
+    - rm -f .gradle/caches/modules-2/modules-2.lock
+    - rm -rf .gradle/caches/*/plugin-resolution/ || true
+  artifacts:
+    name: "app-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - build/libs/
+      - build/app.jar
+    expire_in: 1 week

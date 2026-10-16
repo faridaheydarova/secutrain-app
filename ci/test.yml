@@ -1,0 +1,43 @@
+# =============================================================================
+# TEST (unit + integration)
+# =============================================================================
+unit-test:
+  extends: .gradle-base
+  stage: test
+  script:
+    - ./gradlew test --build-cache
+  artifacts:
+    when: always            # test uğursuz olsa da report görünsün
+    reports:
+      junit: "**/build/test-results/test/*.xml"
+    paths:
+      - "**/build/reports/tests/test/"
+    expire_in: 1 week
+
+integration-test:
+  extends: .gradle-base
+  stage: test
+  # Integration test üçün servis lazımdırsa (nümunə):
+  # services:
+  #   - name: postgres:16-alpine
+  #     alias: db
+  # variables:
+  #   POSTGRES_DB: app_test
+  #   POSTGRES_USER: app_test
+  #   POSTGRES_PASSWORD: test-only-password   # yalnız test dəyəri; real secret deyil
+  script:
+    - |
+      if ./gradlew tasks --all --quiet | grep -Eq '(^|:)integrationTest( - |$)'; then
+        ./gradlew integrationTest --build-cache
+      elif [ "$REQUIRE_INTEGRATION_TESTS" = "true" ]; then
+        echo "ERROR: 'integrationTest' task tapılmadı, amma REQUIRE_INTEGRATION_TESTS=true"
+        exit 1
+      else
+        echo "WARNING: 'integrationTest' task tapılmadı - bu job heç nə işlətmədi."
+        echo "build.gradle.kts-ə integrationTest əlavə et (docs/CICD.md, bölmə 'Integration test')."
+      fi
+  artifacts:
+    when: always
+    reports:
+      junit: "**/build/test-results/integrationTest/*.xml"
+    expire_in: 1 week

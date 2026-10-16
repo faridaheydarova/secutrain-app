@@ -1,0 +1,21 @@
+# =============================================================================
+# PACKAGE: Docker image build + GitLab Container Registry-yə push
+# Tələb: runner Docker-in-Docker üçün "privileged" olmalıdır (və ya socket binding).
+# =============================================================================
+docker-build:
+  stage: package
+  image: docker:27
+  services:
+    - docker:27-dind
+  interruptible: true
+  needs:
+    - job: gradle-build
+      artifacts: true
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+    IMAGE: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build --pull --build-arg RUNTIME_IMAGE="$RUNTIME_IMAGE" -t "$IMAGE" .
+    - docker push "$IMAGE"

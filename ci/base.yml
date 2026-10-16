@@ -1,0 +1,24 @@
+# =============================================================================
+# Təkrar istifadə olunan gizli job-lar (extends ilə çağırılır)
+# =============================================================================
+
+# Gradle job-ları üçün ümumi baza: image, cache, env
+.gradle-base:
+  image: ${JAVA_IMAGE}
+  interruptible: true
+  variables:
+    GRADLE_USER_HOME: "${CI_PROJECT_DIR}/.gradle"
+    GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.console=plain"
+  cache:
+    key:
+      # GitLab cache:key:files maksimum 2 fayl qəbul edir
+      files:
+        - build.gradle.kts
+        - gradle/wrapper/gradle-wrapper.properties
+      prefix: gradle
+    paths:
+      - .gradle/caches
+      - .gradle/wrapper
+    policy: pull          # yalnız build job-u pull-push edir
+  before_script:
+    - chmod +x ./gradlew
